@@ -31,5 +31,27 @@ body { margin: 0; background: #f6f8fb; color: #1f2937; }
 .btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
 .btn.ghost { background: transparent; }
 .link { border: none; background: none; color: var(--brand); cursor: pointer; padding: 0; }
-.page-foot { display: flex; justify-content: space-between; margin-top: 8px; font-size: 12px; color: var(--muted); }
+.link:disabled { color: #94a3b8; cursor: not-allowed; }
+.page-foot { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--muted); }
 .error-text { color: #b42318; }
+.success-text { color: #027a48; }
+.muted-text { color: var(--muted); }
+.status-badge { display: inline-block; border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 600; }
+.status-in-use { background: #dcfae6; color: #027a48; }
+.status-pending { background: #fff4d6; color: #b54708; }
+.status-calibrating { background: #e0edff; color: #1849a9; }
+.status-disabled { background: #f2f4f7; color: #475467; }
+.status-legacy { background: #eef2ff; color: #4338ca; }
+.modal-mask { position: fixed; inset: 0; background: rgb(15 23 42 / 55%); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+.modal { width: min(820px, 100%); max-height: 86vh; overflow: auto; background: #fff; border-radius: 10px; padding: 18px 20px; box-shadow: 0 24px 60px rgb(15 23 42 / 25%); }
+.modal-head { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; }
+.modal-head h3 { margin: 0; }
+.modal-head p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
+.detail-status { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+.detail-grid { display: grid; grid-template-columns: 120px 1fr 120px 1fr; gap: 8px 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+.detail-grid dt { color: var(--muted); font-size: 12px; }
+.detail-grid dd { margin: 0; font-size: 13px; }
+.history-list { padding-left: 0; list-style: none; margin: 8px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.history-list li { display: grid; grid-template-columns: 44px 1fr 90px 170px; gap: 8px; align-items: center; border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; font-size: 12px; }
+.history-step { color: var(--brand); font-weight: 600; }
+@media (max-width: 720px) { .detail-grid { grid-template-columns: 100px 1fr; } .history-list li { grid-template-columns: 40px 1fr; } }
