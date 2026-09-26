@@ -4,16 +4,20 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from app.schemas import ActionResult, EntryPayload, PageResult
-from app.services.instrument import InstrumentService
+from app.services.instrument import STATUS_ORDER, InstrumentService
 
 router = APIRouter(prefix="/api/instrument", tags=["仪器管理"])
 
 service = InstrumentService()
 
 LIST_FIELDS = ["仪器编号", "仪器名称", "型号规格", "所属实验室", "校准周期", "上次校准日", "下次校准日", "仪器状态"]
-STATUSES = ["在用", "待校准", "校准中", "已停用", "已报废"]
+STATUSES = STATUS_ORDER
+
+# 动作结果类别 → HTTP 状态码：重复操作幂等放行，状态冲突明确返回 409。
+OUTCOME_STATUS = {"ok": 200, "repeat": 200, "missing": 404, "invalid": 400, "conflict": 409}
 
 
 @router.get("", response_model=PageResult[dict])
@@ -28,6 +32,19 @@ def list_entries(
         raise HTTPException(status_code=400, detail="每页最多 200 条，请缩小分页范围")
     items, total = service.list_entries(keyword=keyword, status=status, page=page, size=size)
     return PageResult(items=items, total=total, page=page, size=size)
+
+
+@router.get("/summary")
+def status_summary() -> dict[str, Any]:
+    """按状态统计检测仪器数量，驱动列表页的状态卡片。"""
+    return {"module": "instrument", "summary": service.status_summary()}
+
+
+@router.get("/export")
+def export_entries() -> dict[str, Any]:
+    """导出仪器管理清单：返回当前过滤条件下的全量数据。"""
+    items, total = service.list_entries(page=1, size=10000)
+    return {"module": "instrument", "total": total, "items": items}
 
 
 @router.get("/{entry_id}", response_model=dict)
@@ -49,17 +66,15 @@ def create_entry(payload: EntryPayload) -> ActionResult:
 
 
 @router.post("/{entry_id}/actions", response_model=ActionResult)
-def run_action(entry_id: int, payload: EntryPayload) -> ActionResult:
-    """对单条检测仪器执行发起校准、完成校准、停用仪器；不允许的动作会被拦下并说明原因。"""
+def run_action(entry_id: int, payload: EntryPayload) -> JSONResponse:
+    """对单条检测仪器执行发起校准、完成校准、停用仪器。
+
+    请求体 values 里带 action；可再带 expected_status（页面上看到的状态）做乐观并发校验，
+    状态已被别人改掉时返回 409 并提示刷新，重复提交同一动作按幂等处理。
+    """
     action = str(payload.values.get("action") or "").strip()
-    entry, message = service.run_action(entry_id, action)
-    if entry is None:
-        return ActionResult(ok=False, message=message)
-    return ActionResult(ok=True, message=message, entry=entry)
-
-
-@router.get("/export")
-def export_entries() -> dict[str, Any]:
-    """导出仪器管理清单：返回当前过滤条件下的全量数据。"""
-    items, total = service.list_entries(page=1, size=10000)
-    return {"module": "instrument", "total": total, "items": items}
+    expected = payload.values.get("expected_status")
+    expected_status = str(expected).strip() if expected is not None else None
+    entry, message, outcome = service.run_action(entry_id, action, expected_status)
+    result = ActionResult(ok=outcome in {"ok", "repeat"}, message=message, entry=entry)
+    return JSONResponse(status_code=OUTCOME_STATUS[outcome], content=result.model_dump(mode="json"))
